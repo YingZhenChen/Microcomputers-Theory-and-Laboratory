@@ -1,0 +1,43 @@
+ORG 0				; reset vector
+	JMP main		; jump to the main program
+
+ORG 13H			; external 1 interrupt vector
+	JMP ext1ISR		; jump to the external 1 ISR
+
+ORG 1BH				; timer 1 interrupt vector
+	JMP timer1ISR		; jump to timer 1 ISR
+
+ORG 30H				; main program starts here
+main:
+	SETB IT1		; set external 1 interrupt as edge-activated
+	SETB EX1		; enable external 1 interrupt
+	CLR P0.7		; enable DAC WR line
+	MOV TMOD, #32		; set timer 1 as 8-bit auto-reload interval timer
+
+	MOV TH1, #-50		; | put -50 into timer 1 high-byte - this reload value, 
+   				; | with system clock of 12 MHz, will result in a timer 1 overflow every 50 us
+
+	MOV TL1, #-50		; | put the same value in the low byte to ensure the timer starts counting from 
+   				; | 236 (256 - 50) rather than 0
+
+	SETB TR1		; start timer 1
+	SETB ET1		; enable timer 1 interrupt
+	SETB EA			; set the global interrupt enable bit
+	JMP $			; jump back to the same line (ie: do nothing)
+
+; end of main program
+
+
+; timer 0 ISR - simply starts an ADC conversion
+timer1ISR:
+	CLR P3.6		; clear ADC WR line
+	SETB P3.6		; then set it - this results in the required positive edge to start a conversion
+	RETI			; return from interrupt
+
+
+; external 0 ISR - responds to the ADC conversion complete interrupt
+ext1ISR:
+	CLR P3.7		; clear the ADC RD line - this enables the data lines
+	MOV P1, P2		; take the data from the ADC on P2 and send it to the DAC data lines on P1
+	SETB P3.7		; disable the ADC data lines by setting RD
+	RETI			; return from interrupt
