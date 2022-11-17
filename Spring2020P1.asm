@@ -1,3 +1,4 @@
+;serial port with counting number of 1s(with bugs)
 ORG 0
 	JMP main 
 ORG 0023H 			  ; serial port interrupt vector
